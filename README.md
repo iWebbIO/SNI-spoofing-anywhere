@@ -150,8 +150,9 @@ the default-route interface is used.
   zero even on a busy WAN link.
 - No packets are dropped or rewritten in the kernel path; the tool only *sniffs*
   and injects one extra packet, so it adds no forwarding latency.
-- If a particular kernel's BPF ever misbehaves, a pure-Python pre-filter still
-  guarantees correctness (just at higher CPU).
+- If a particular kernel's BPF ever misbehaves, set `SNI_NO_BPF=1` to skip the
+  kernel filter and rely on the pure-Python pre-filter alone — guaranteed correct,
+  just higher CPU. (Verified: the end-to-end desync passes with BPF on *and* off.)
 
 ---
 

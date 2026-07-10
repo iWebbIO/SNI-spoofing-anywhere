@@ -28,6 +28,7 @@ checksums) and raw-sends it.
 Root privileges are required (raw sockets).
 """
 
+import os
 import socket
 import struct
 
@@ -114,11 +115,17 @@ class RawSocketEngine:
         # Attach an in-kernel BPF so only this flow's packets are copied to
         # userspace — keeps CPU near zero even on a busy router. Best-effort:
         # if it fails, the Python pre-filter in recv() still keeps us correct.
-        try:
-            fprog, _buf = _build_bpf(self.dst_ip)
-            self.recv_sock.setsockopt(socket.SOL_SOCKET, SO_ATTACH_FILTER, fprog)
-        except Exception:
-            pass
+        #
+        # Escape hatch: if some kernel's BPF wrongly dropped our packets, the
+        # in-kernel filter would starve the (correct) Python pre-filter, breaking
+        # the tool. Set SNI_NO_BPF=1 to skip the kernel filter entirely and rely
+        # on the Python pre-filter alone (higher CPU, but guaranteed correct).
+        if os.environ.get("SNI_NO_BPF") != "1":
+            try:
+                fprog, _buf = _build_bpf(self.dst_ip)
+                self.recv_sock.setsockopt(socket.SOL_SOCKET, SO_ATTACH_FILTER, fprog)
+            except Exception:
+                pass
         # NB: we intentionally do NOT bind() to a single interface. The BPF
         # already restricts capture to this flow (by CONNECT_IP), so binding
         # buys nothing, and binding to an interface by name proved unreliable on
