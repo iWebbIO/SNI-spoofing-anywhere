@@ -1,0 +1,10 @@
+# Core runtime dependencies.
+#
+# Linux / OpenWRT need NOTHING here — the raw-socket engine is pure stdlib.
+# Windows needs WinDivert (via pydivert); the marker installs it only there.
+pydivert>=3.1.0; platform_system == "Windows"
+
+# Optional extras (not required; improve UX / enable extra platforms):
+#   psutil  -> nicer interface enumeration on every OS
+#   scapy   -> enables the fallback engine on macOS / *BSD  (needs libpcap)
+# Install with:  pip install psutil scapy
