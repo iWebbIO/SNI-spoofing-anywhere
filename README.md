@@ -3,7 +3,7 @@
 Bypass DPI (Deep Packet Inspection) with IP/TCP header manipulation.
 
 This is a **cross-platform rewrite** of the original Windows-only
-[iWebbIO/SNI-Spoofing](https://github.com/iWebbIO/SNI-Spoofing). The original
+[patterniha/SNI-Spoofing](https://github.com/patterniha/SNI-Spoofing). The original
 depended on **WinDivert** and ran only on Windows. This version keeps the exact
 same desync technique but abstracts packet capture/injection behind a small
 engine interface, so it runs on:
@@ -192,9 +192,8 @@ payload while the fake SNI packet is discarded as old data.
 
 ## Credits
 
-Original technique and Windows implementation: **@patterniha** /
-[iWebbIO/SNI-Spoofing](https://github.com/iWebbIO/SNI-Spoofing). Licensed under
+Original technique and Windows implementation: **@patterniha**. Licensed under
 GPL-3.0 (see `LICENSE`).
 
-Support free & open internet access:
+Support free & open internet access (@patterniha):
 USDT (BEP20): `0x76a768B53Ca77B43086946315f0BDF21156bF424`
