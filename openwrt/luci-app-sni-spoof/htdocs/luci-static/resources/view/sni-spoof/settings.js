@@ -2,14 +2,19 @@
 'require view';
 'require form';
 'require uci';
+'require network';
 
 return view.extend({
 	load: function () {
-		return uci.load('sni-spoof');
+		return Promise.all([
+			uci.load('sni-spoof'),
+			network.getDevices()
+		]);
 	},
 
-	render: function () {
+	render: function (data) {
 		var m, s, o;
+		var devices = (data && data[1]) || [];
 
 		m = new form.Map('sni-spoof', _('SNI Spoofing'),
 			_('Local DPI-bypass relay. In Passwall2, point a node at the listen ' +
@@ -45,6 +50,21 @@ return view.extend({
 		o = s.option(form.Value, 'fake_sni', _('Fake SNI'),
 			_('The allowed hostname DPI will see, e.g. chatgpt.com.'));
 		o.placeholder = 'chatgpt.com';
+
+		o = s.option(form.ListValue, 'interface', _('Network interface'),
+			_('Outbound interface the relay binds to. "Default" follows the ' +
+			  'default route automatically.'));
+		o.value('default', _('Default (default route)'));
+		devices.forEach(function (dev) {
+			var name = dev.getName();
+			if (!name || name == 'lo')
+				return;
+			var v4 = (dev.getIPAddrs() || []).filter(function (a) {
+				return a.indexOf(':') < 0;
+			});
+			var label = v4.length ? (name + ' (' + v4[0] + ')') : name;
+			o.value(name, label);
+		});
 
 		return m.render();
 	}

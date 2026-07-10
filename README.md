@@ -58,6 +58,7 @@ utils/rawpacket.py ── pure-Python IPv4/TCP parse+build (pydivert-compatible)
   "CONNECT_IP": "188.114.99.0",
   "CONNECT_PORT": 443,
   "FAKE_SNI": "chatgpt.com",
+  "INTERFACE": "",
   "BACKEND": "auto",
   "AUTO_SELECT_INTERFACE": false
 }
@@ -65,6 +66,9 @@ utils/rawpacket.py ── pure-Python IPv4/TCP parse+build (pydivert-compatible)
 
 - `CONNECT_IP` — the real IP you want to reach (e.g. a Cloudflare edge IP).
 - `FAKE_SNI` — the decoy hostname shown to the DPI.
+- `INTERFACE` — pin the outbound interface by name (e.g. `wan`) or by IPv4.
+  Empty or `"default"` = follow the default route automatically. On desktop this
+  is offered as an interactive menu; on OpenWRT it is the LuCI dropdown.
 - `BACKEND` — `auto` (recommended), or force `windivert` / `raw` / `scapy`.
 - `AUTO_SELECT_INTERFACE` — `true` to skip the interactive interface menu (also
   auto-skipped whenever stdin is not a TTY, e.g. under systemd/procd).
@@ -151,7 +155,12 @@ config sni-spoof 'main'
 	option connect_ip   '<your server IP>'
 	option connect_port '443'
 	option fake_sni     'chatgpt.com'
+	option interface    'default'      # or pin one, e.g. 'wan'
 ```
+
+The LuCI page shows **Network interface** as a dropdown — **Default (default
+route)** plus every device on the router. Pick `wan` to force egress out the WAN,
+or leave it on Default.
 
 `Save & Apply` (or `uci commit sni-spoof`) regenerates `config.json` and restarts
 the relay via the procd reload trigger. CLI equivalents:

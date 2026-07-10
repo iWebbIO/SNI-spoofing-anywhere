@@ -18,7 +18,7 @@ CONF_JSON="$PROG_DIR/config.json"
 # Render config.json from UCI. Echoes the 'enabled' flag on stdout so the caller
 # can decide whether to actually launch (the JSON itself goes to the file).
 gen_config() {
-	local enabled listen_host listen_port connect_ip connect_port fake_sni backend
+	local enabled listen_host listen_port connect_ip connect_port fake_sni interface backend
 	config_load 'sni-spoof'
 	config_get enabled      main enabled      0
 	config_get listen_host  main listen_host  '127.0.0.1'
@@ -26,6 +26,7 @@ gen_config() {
 	config_get connect_ip   main connect_ip   '188.114.99.0'
 	config_get connect_port main connect_port 443
 	config_get fake_sni     main fake_sni     'chatgpt.com'
+	config_get interface    main interface    'default'
 	config_get backend      main backend      'auto'
 
 	cat > "$CONF_JSON" <<-EOF
@@ -35,6 +36,7 @@ gen_config() {
 	  "CONNECT_IP": "$connect_ip",
 	  "CONNECT_PORT": $connect_port,
 	  "FAKE_SNI": "$fake_sni",
+	  "INTERFACE": "$interface",
 	  "BACKEND": "$backend",
 	  "AUTO_SELECT_INTERFACE": true
 	}

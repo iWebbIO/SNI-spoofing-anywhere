@@ -143,6 +143,25 @@ def ifname_for_ip(ip: str) -> str:
     return ""
 
 
+def ip_for_ifname(name: str) -> str:
+    """Return the primary IPv4 of interface ``name`` (or '' if it has none yet).
+
+    Used when the user pins a specific interface in the config. Falls back to a
+    direct Linux ioctl so an interface that exists but is not in ``list_interfaces``
+    (e.g. just coming up) can still be resolved.
+    """
+    for iface in list_interfaces():
+        if iface.get("name") == name:
+            return iface.get("ip", "")
+    if os.name != "nt" and hasattr(socket, "if_nameindex"):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            return _linux_ifaddr(s, name)
+        finally:
+            s.close()
+    return ""
+
+
 def default_route_ip(addr: str = "8.8.8.8") -> str:
     """The local IPv4 the kernel would use to reach ``addr`` (no packets sent)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

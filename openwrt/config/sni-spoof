@@ -11,5 +11,8 @@ config sni-spoof 'main'
 	option connect_port '443'
 	# The allowed hostname DPI will see in the injected fake ClientHello.
 	option fake_sni 'chatgpt.com'
+	# Outbound interface: 'default' = the default-route interface (automatic),
+	# or pin one by name (e.g. 'wan'). The LuCI selector writes this.
+	option interface 'default'
 	# Packet engine: 'auto' picks the raw-socket engine on Linux/OpenWrt.
 	option backend 'auto'

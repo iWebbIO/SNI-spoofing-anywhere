@@ -14,6 +14,7 @@ from utils.platform_utils import (
     elevate_or_exit,
     list_interfaces,
     ifname_for_ip,
+    ip_for_ifname,
     default_route_ip,
 )
 from engines import create_engine, detect_backend
@@ -40,6 +41,10 @@ DEFAULT_CONFIG = {
     # interactive interface menu and use the default-route interface. Handy for
     # headless boxes and OpenWRT.
     "AUTO_SELECT_INTERFACE": False,
+    # Pin the outbound interface by name (e.g. "wan") or by IPv4. Empty or "default"
+    # = pick the default-route interface automatically. This is what the OpenWRT /
+    # LuCI interface selector sets; it works on every platform.
+    "INTERFACE": "",
 }
 
 
@@ -71,7 +76,16 @@ BACKEND = config.get("BACKEND", "auto")
 if not BACKEND or BACKEND == "auto":
     BACKEND = detect_backend()
 AUTO_SELECT_INTERFACE = bool(config.get("AUTO_SELECT_INTERFACE", False))
+CONFIG_INTERFACE = str(config.get("INTERFACE", "") or "").strip()
 INTERFACE_IPV4 = get_default_interface_ipv4(CONNECT_IP)
+
+
+def _looks_like_ipv4(s: str) -> bool:
+    try:
+        socket.inet_aton(s)
+        return s.count(".") == 3
+    except OSError:
+        return False
 
 
 DATA_MODE = "tls"
@@ -213,6 +227,21 @@ def select_network_interface() -> "tuple[str, str]":
             if i.get("ip") == ip:
                 return i.get("name", "")
         return ifname_for_ip(ip)
+
+    # A pinned interface (from config / the LuCI selector) wins on every platform.
+    # Empty or "default" means auto default-route.
+    if CONFIG_INTERFACE and CONFIG_INTERFACE.lower() != "default":
+        if _looks_like_ipv4(CONFIG_INTERFACE):
+            name = name_for(CONFIG_INTERFACE) or "manual"
+            print(f"[Info] Using configured interface IP {CONFIG_INTERFACE} ({name})")
+            return name, CONFIG_INTERFACE
+        ip = ip_for_ifname(CONFIG_INTERFACE)
+        if ip:
+            print(f"[Info] Using configured interface {CONFIG_INTERFACE} ({ip})")
+        else:
+            print(f"[Info] Configured interface {CONFIG_INTERFACE} has no IPv4 yet; "
+                  f"waiting for it to come up")
+        return CONFIG_INTERFACE, ip
 
     non_interactive = AUTO_SELECT_INTERFACE or not sys.stdin or not sys.stdin.isatty()
     if non_interactive or not interfaces:
