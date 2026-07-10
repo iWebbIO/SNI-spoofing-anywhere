@@ -1,0 +1,14 @@
+{
+	"admin/services/sni-spoof": {
+		"title": "SNI Spoofing",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "sni-spoof/settings"
+		},
+		"depends": {
+			"acl": [ "luci-app-sni-spoof" ],
+			"uci": { "sni-spoof": true }
+		}
+	}
+}

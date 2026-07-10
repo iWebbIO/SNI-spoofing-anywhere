@@ -1,0 +1,11 @@
+{
+	"luci-app-sni-spoof": {
+		"description": "Grant access to SNI Spoofing configuration",
+		"read": {
+			"uci": [ "sni-spoof" ]
+		},
+		"write": {
+			"uci": [ "sni-spoof" ]
+		}
+	}
+}

@@ -118,29 +118,76 @@ curl --resolve real-host:443:127.0.0.1 https://real-host/ --connect-to ::127.0.0
 
 ## OpenWRT
 
-OpenWRT is fully supported by the pure-stdlib Linux engine. There are no
-third-party Python dependencies — only the Python runtime itself.
+OpenWRT is fully supported by the pure-stdlib Linux engine — no third-party
+Python packages, only the Python runtime. Verified end-to-end on **OpenWrt
+25.12.5, kernel 6.12, ipq40xx (ARMv7)** with `fw4`/nftables active (see below).
 
 > **Space note:** Python needs a few MB of free space. On small routers use
 > [extroot](https://openwrt.org/docs/guide-user/additional-software/extroot_configuration)
 > or a USB stick.
 
+### Install
+
 ```sh
-# on the router (as root):
-opkg update
-opkg install python3 python3-asyncio python3-ctypes
-
-# copy this repo to the router, then:
-sh openwrt/install.sh          # installs to /opt/sni-spoof + a procd service
-
-# edit /opt/sni-spoof/config.json (CONNECT_IP / FAKE_SNI / LISTEN_PORT), then:
-/etc/init.d/sni-spoof enable
-/etc/init.d/sni-spoof start
-logread -f                     # watch output
+# copy this repo to the router, then, as root:
+sh openwrt/install.sh
 ```
 
-Under procd there is no TTY, so the interface menu is skipped automatically and
-the default-route interface is used.
+The installer:
+- installs the Python runtime (`apk` on OpenWrt 24.10+, `opkg` on older builds);
+- copies the program to `/opt/sni-spoof`;
+- installs a UCI config at `/etc/config/sni-spoof` and a procd service;
+- installs a minimal **LuCI** page under **Services → SNI Spoofing** (if LuCI is present).
+
+### Configure
+
+Use **LuCI → Services → SNI Spoofing**, or edit `/etc/config/sni-spoof`:
+
+```
+config sni-spoof 'main'
+	option enabled      '1'
+	option listen_host  '127.0.0.1'   # loopback: only this router can dial it
+	option listen_port  '40443'
+	option connect_ip   '<your server IP>'
+	option connect_port '443'
+	option fake_sni     'chatgpt.com'
+```
+
+`Save & Apply` (or `uci commit sni-spoof`) regenerates `config.json` and restarts
+the relay via the procd reload trigger. CLI equivalents:
+
+```sh
+/etc/init.d/sni-spoof enable      # start on boot
+/etc/init.d/sni-spoof start
+logread -e sni-spoof              # watch output
+```
+
+Under procd there is no TTY, so the interface menu is skipped and the
+default-route interface is used automatically.
+
+### Using it with Passwall2
+
+The relay is just a **local endpoint** — it does not touch routing or the
+firewall. To route a Passwall2 node through it:
+
+1. Set the relay's `connect_ip`/`connect_port` to your **real proxy server**, and
+   `fake_sni` to an allowed hostname (e.g. `chatgpt.com`). Keep `listen_host` on
+   `127.0.0.1`.
+2. In Passwall2, edit your node and set its **address/port to `127.0.0.1` : `40443`**
+   (the relay's listen address). Passwall speaks its normal protocol *through* the
+   relay; the relay injects the fake SNI on the wire.
+3. **Add `connect_ip` to Passwall2's direct/bypass list** so Passwall does not
+   re-proxy the relay's own outbound connection (which would loop).
+
+### Why it is non-invasive on a router (fw4 / conntrack)
+
+The wrong-seq fake ClientHello is placed just *behind* the connection's first
+real byte, so Linux conntrack treats it as a valid **retransmission**, not
+`invalid`. This was verified on real hardware against `fw4`'s exact
+`oifname "wan" ct state invalid drop` rule with strict conntrack
+(`nf_conntrack_tcp_be_liberal = 0`): the desync completes and the drop counter
+stays at **0**. The relay needs **no firewall rules** and cannot be dropped by
+fw4. (Reproduce with `sudo python3 tests/net_e2e_fw4.py`.)
 
 ### Performance / lightweightness
 
@@ -183,6 +230,9 @@ sudo python3 tests/test_linux_integration.py
 
 # FULL end-to-end desync in a veth/netns sandbox (root, no internet needed):
 sudo python3 tests/net_e2e.py
+
+# end-to-end desync THROUGH an fw4-style conntrack INVALID-drop rule (root):
+sudo python3 tests/net_e2e_fw4.py
 ```
 
 The end-to-end test proves the real behaviour: the peer receives the genuine

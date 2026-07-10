@@ -1,0 +1,15 @@
+config sni-spoof 'main'
+	# Master on/off switch (the LuCI "Enabled" toggle writes this).
+	option enabled '0'
+	# Listen on loopback so only this router (e.g. Passwall2) can dial the relay.
+	# Set to 0.0.0.0 only if you want LAN clients to use it directly.
+	option listen_host '127.0.0.1'
+	option listen_port '40443'
+	# The REAL destination the relay connects to (your proxy server's IP).
+	# Add this IP to Passwall2's direct/bypass list so Passwall does not re-proxy it.
+	option connect_ip '188.114.99.0'
+	option connect_port '443'
+	# The allowed hostname DPI will see in the injected fake ClientHello.
+	option fake_sni 'chatgpt.com'
+	# Packet engine: 'auto' picks the raw-socket engine on Linux/OpenWrt.
+	option backend 'auto'
